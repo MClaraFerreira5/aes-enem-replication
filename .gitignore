@@ -5,3 +5,8 @@ data/outputs/
 
 # Manter apenas as documentações das pastas
 !data/**/README.md
+
+lightning_logs/
+
+__pycache__/
+*.pyc
