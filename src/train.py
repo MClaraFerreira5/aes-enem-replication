@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 from coral_pytorch.dataset import corn_label_from_logits
-
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from src.data.dataset import get_dataloaders
 from src.models.bertimbau_module import BERTimbauForAES
 from src.utils.metrics import evaluate_predictions
@@ -13,10 +13,12 @@ def train_and_eval_competence(
         comp_name, 
         model_name="neuralmind/bert-base-portuguese-cased", 
         batch_size=8, 
-        max_epochs=2,
+        max_epochs=15,
         lr=3e-5,
         patience=2
     ):
+    pl.seed_everything(42, workers=True)
+
     print(f"\n---> Treinando Modelo para {comp_name.upper()} <---")
     
     dataloaders = get_dataloaders(
@@ -30,20 +32,23 @@ def train_and_eval_competence(
         model_name=model_name,
         mode="ordinal",
         num_classes=6,  # 6 níveis: 0, 40, 80, 120, 160, 200
-        lr=2e-5
+        lr=lr
     )
 
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
+    ckpt = ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1)
+    es = EarlyStopping(monitor="val_loss", mode="min", patience=patience)
     trainer = pl.Trainer(
         max_epochs=max_epochs,
         accelerator=accelerator,
         devices=1,
         precision="16-mixed" if accelerator == "gpu" else 32,
-        enable_checkpointing=False
+        callbacks=[ckpt, es],
+        enable_checkpointing=True
     )
 
     trainer.fit(model, dataloaders['train'], dataloaders['val'])
-
+    model = BERTimbauForAES.load_from_checkpoint(ckpt.best_model_path)
     # Predição no conjunto de teste
     model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
