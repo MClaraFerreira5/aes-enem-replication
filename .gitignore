@@ -10,3 +10,12 @@ lightning_logs/
 
 __pycache__/
 *.pyc
+
+*.ini
+docs/main.aux
+docs/main.log
+docs/main.fdb_latexmk
+docs/main.fls
+docs/main.bbl
+docs/main.synctex.gz
+docs/main.blg
