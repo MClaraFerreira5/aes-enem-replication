@@ -1,0 +1,23 @@
+\section{Metodologia}
+\label{sec:metodologia}
+
+Este trabalho replica o \textit{baseline} do \textit{benchmark} de Silveira et al.~\cite{silveira-etal-2024-new} e o estende em duas direções: (i) a avaliação em uma base de dados diferente, o EssayBR, e (ii) a avaliação com um grande modelo de linguagem (LLM). Em todos os casos, a tarefa é prever, para cada redação, as notas das cinco competências do ENEM (0, 40, 80, 120, 160 ou 200 pontos); a nota total, de 0 a 1000, é a soma das cinco.
+
+\subsection{Bases de dados}
+
+\textbf{AES-ENEM.} Usamos a Fonte A do AES-ENEM com notas de avaliadores, composta por 395 redações de 41 temas, coletadas do Educação UOL~\cite{silveira-etal-2024-new}. Cada redação tem até três anotações: a nota original do site e as de dois avaliadores especialistas. Cada anotação é tratada como uma instância, o que resulta em 1.165 instâncias, divididas em treino (758), validação (198) e teste (209), com temas distintos em cada divisão.
+
+\textbf{EssayBR.} É a versão estendida do corpus Essay-Br~\cite{marinho2022essaybr}, com 6.577 redações de 151 temas, cada uma com uma única nota por competência e a nota total. Usamos a versão com o texto já limpo. Como o Essay-Br e a Fonte A foram coletados dos mesmos \textit{sites}, as bases compartilham redações: 383 (5,8\%) das redações do EssayBR também estão no AES-ENEM. Elas foram identificadas por coincidência de trechos de 8 palavras (mais de 30\% do texto) e removidas da avaliação, restando 6.194 redações.
+
+Nas duas bases, a nota de cada competência é convertida em uma classe ordinal de 0 a 5 (nota dividida por 40) e o texto é truncado em 512 \textit{tokens}.
+
+\subsection{Modelos}
+
+\textbf{BERTimbau com regressão ordinal.} Replicamos o modelo ordinal do artigo original: o BERTimbau base~\cite{souza2020bertimbau} com a função de perda CORN~\cite{shi2021corn}, treinando um modelo independente para cada competência. A representação do \textit{token} [CLS] passa por \textit{dropout} (0,2) e por uma camada linear de 5 saídas, correspondentes às 6 classes. O ajuste fino usa o treino da Fonte A, com AdamW (taxa de aprendizado $3\times10^{-5}$, \textit{weight decay} 0,01, lotes de 8), no máximo 15 épocas e parada antecipada pela perda de validação (paciência 2), com semente 42. Esses hiperparâmetros foram definidos por nós e podem diferir dos do artigo original. O modelo é treinado apenas no AES-ENEM e aplicado ao EssayBR sem nenhum ajuste.
+
+\textbf{LLM.} Avaliamos \textbf{[NOME E VERSÃO DA LLM]} sem ajuste fino. A LLM recebe apenas o texto da redação, como o BERTimbau, pois o EssayBR não traz o enunciado dos temas. Um \textit{prompt} descreve as cinco competências do ENEM e pede, para cada uma, uma nota entre 0, 40, 80, 120, 160 e 200, em formato estruturado. \textbf{[Definir: \textit{zero-shot} ou \textit{few-shot}, temperatura e data das execuções.]}
+
+\subsection{Protocolo de avaliação}
+
+Os dois modelos são avaliados nos mesmos conjuntos: (i) o teste da Fonte A (209 instâncias), para a replicação e a comparação com o artigo original, e (ii) o EssayBR sem as redações repetidas (6.194), para medir a generalização para outra base. As métricas são o \textit{Quadratic Weighted Kappa} (QWK), o erro quadrático médio (RMSE, em pontos) e a divergência, que é o percentual de redações em que a nota prevista difere da humana em mais de 80 pontos nas competências e em mais de 100 pontos na nota total, como no artigo original. % ATENÇÃO: o código atual (src/utils/metrics.py) usa o limiar de 80 pontos também para a nota total; alinhar com o artigo (100) ou ajustar este texto.
+Como a dispersão das notas difere entre as bases, o RMSE também é comparado ao de um preditor que sempre responde a nota média. As métricas são calculadas sobre o conjunto completo de teste; o subconjunto sem divergência entre anotadores, reportado no artigo original, não é usado aqui.

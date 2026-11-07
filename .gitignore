@@ -19,3 +19,5 @@ docs/main.fls
 docs/main.bbl
 docs/main.synctex.gz
 docs/main.blg
+# Checkpoints dos modelos treinados
+checkpoints/
